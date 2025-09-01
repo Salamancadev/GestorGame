@@ -1,9 +1,11 @@
 {
   "name": "sistema_misiones",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Gestor de misiones de videojuegos",
+  "main": "index.ts",
   "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,5 +19,13 @@
   },
   "dependencies": {
     "inquirer": "^12.9.4"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Salamancadev/GestorGame.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Salamancadev/GestorGame/issues"
+  },
+  "homepage": "https://github.com/Salamancadev/GestorGame#readme"
 }

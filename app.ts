@@ -1,6 +1,6 @@
 // app.ts
 import * as readline from "readline";
-import { MissionManager, Mission } from "./misiones";
+import { MissionManager, Mission } from "./src/misiones";
 
 const manager = new MissionManager();
 
