@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
+.DS_Store
+
+# TypeScript
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+
+# VSC
+.vscode/
+
+# IDEs
+.idea/
