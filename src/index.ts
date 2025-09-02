@@ -2,33 +2,117 @@ import inquirer from "inquirer";
 import fs from "fs";
 import path from "path";
 
-// Ruta del archivo donde se guardan las misiones
-const DATA_FILE = path.join(__dirname, "misiones.json");
-
-interface Mision {
-  id: number;
+// Abstracción: interfaz
+interface IMision {
+  readonly id: number;
   titulo: string;
   completada: boolean;
+  completar(): void;
 }
 
-// Cargar misiones desde JSON
-function cargarMisiones(): Mision[] {
-  if (fs.existsSync(DATA_FILE)) {
-    const data = fs.readFileSync(DATA_FILE, "utf-8");
-    return JSON.parse(data);
+// Abstracción: clase abstracta
+abstract class MisionBase implements IMision {
+  readonly id: number;
+  protected _titulo: string;
+  protected _completada: boolean;
+
+  constructor(id: number, titulo: string) {
+    this.id = id;
+    this._titulo = titulo;
+    this._completada = false;
   }
-  return [];
+
+  get titulo(): string {
+    return this._titulo;
+  }
+
+  set titulo(valor: string) {
+    this._titulo = valor;
+  }
+
+  get completada(): boolean {
+    return this._completada;
+  }
+
+  completar(): void {
+    this._completada = true;
+  }
+
+  // Método público para restaurar el estado
+  restaurarEstado(completada: boolean): void {
+    this._completada = completada;
+  }
 }
 
-// Guardar misiones en JSON
-function guardarMisiones(misiones: Mision[]) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(misiones, null, 2), "utf-8");
+// Herencia y polimorfismo
+class Mision extends MisionBase {
+  constructor(id: number, titulo: string) {
+    super(id, titulo);
+  }
+
+  // Polimorfismo: sobrescribimos el método
+  completar(): void {
+    super.completar();
+    console.log(`🎉 Misión "${this.titulo}" completada.`);
+  }
 }
 
-// Mostrar menú
-async function mostrarMenu() {
-  const misiones = cargarMisiones();
+// Composición: Gestor contiene misiones
+class GestorMisiones {
+  private misiones: Mision[] = [];
+  private readonly DATA_FILE = path.join(__dirname, "misiones.json");
 
+  constructor() {
+    this.cargarMisiones();
+  }
+
+  private cargarMisiones() {
+    if (fs.existsSync(this.DATA_FILE)) {
+      const data = fs.readFileSync(this.DATA_FILE, "utf-8");
+      const misionesJson = JSON.parse(data);
+      this.misiones = misionesJson.map(
+        (m: any) => {
+          const mision = new Mision(m.id, m.titulo);
+          mision.restaurarEstado(m.completada); // Usar el método público
+          return mision;
+        }
+      );
+    }
+  }
+
+  private guardarMisiones() {
+    fs.writeFileSync(
+      this.DATA_FILE,
+      JSON.stringify(this.misiones.map(m => ({
+        id: m.id,
+        titulo: m.titulo,
+        completada: m.completada
+      })), null, 2),
+      "utf-8"
+    );
+  }
+
+  listarMisiones(): Mision[] {
+    return this.misiones;
+  }
+
+  agregarMision(titulo: string) {
+    const nueva = new Mision(Date.now(), titulo);
+    this.misiones.push(nueva);
+    this.guardarMisiones();
+  }
+
+  completarMision(id: number) {
+    const mision = this.misiones.find(m => m.id === id);
+    if (mision && !mision.completada) {
+      mision.completar();
+      this.guardarMisiones();
+    }
+  }
+}
+
+// Programa principal
+async function mostrarMenu(gestor: GestorMisiones) {
   const { opcion } = await inquirer.prompt([
     {
       type: "list",
@@ -45,6 +129,7 @@ async function mostrarMenu() {
 
   switch (opcion) {
     case "Ver misiones":
+      const misiones = gestor.listarMisiones();
       if (misiones.length === 0) {
         console.log("\n⚠️ No tienes misiones aún.\n");
       } else {
@@ -66,21 +151,13 @@ async function mostrarMenu() {
           message: "Escribe el título de la misión:",
         },
       ]);
-
-      const nuevaMision: Mision = {
-        id: Date.now(),     // ID único
-        titulo: titulo,     // Título ingresado
-        completada: false,  // Siempre inicia en pendiente
-      };
-
-      misiones.push(nuevaMision);
-      guardarMisiones(misiones);
-
+      gestor.agregarMision(titulo);
       console.log("\n✅ Misión agregada con éxito.\n");
       break;
 
     case "Marcar misión como completada":
-      if (misiones.length === 0) {
+      const misiones2 = gestor.listarMisiones();
+      if (misiones2.length === 0) {
         console.log("\n⚠️ No hay misiones para completar.\n");
       } else {
         const { id } = await inquirer.prompt([
@@ -88,30 +165,24 @@ async function mostrarMenu() {
             type: "list",
             name: "id",
             message: "Selecciona una misión:",
-            choices: misiones.map((m) => ({
+            choices: misiones2.map((m) => ({
               name: `${m.completada ? "✅" : "❌"} ${m.titulo}`,
               value: m.id,
             })),
           },
         ]);
-
-        const mision = misiones.find((m) => m.id === id);
-        if (mision) {
-          mision.completada = true;
-          guardarMisiones(misiones);
-          console.log("\n🎉 Misión completada con éxito.\n");
-        }
+        gestor.completarMision(id);
       }
       break;
 
     case "Salir":
       console.log("\n👋 ¡Hasta luego!\n");
-      return; // Finaliza el programa
+      return;
   }
 
-  // Volver a mostrar el menú
-  await mostrarMenu();
+  await mostrarMenu(gestor);
 }
 
 // Iniciar el programa
-mostrarMenu();
+const gestor = new GestorMisiones();
+mostrarMenu(gestor);
